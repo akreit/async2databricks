@@ -27,7 +27,7 @@ case class EtlConfig(
 
 case class AppConfig(
   database: DatabaseConfig,
-  s3: S3Config,  // renamed field in config
+  s3: S3Config,
   etl: EtlConfig
 )
 
