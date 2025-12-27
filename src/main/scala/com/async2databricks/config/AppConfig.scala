@@ -27,12 +27,21 @@ case class EtlConfig(
 
 case class AppConfig(
   database: DatabaseConfig,
-  s3: S3Config,
+  s3: S3Config,  // renamed field in config
   etl: EtlConfig
 )
 
 object AppConfig {
   def load(): Either[pureconfig.error.ConfigReaderFailures, AppConfig] = {
-    ConfigSource.default.load[AppConfig]
+    import pureconfig.generic.ProductHint
+    import pureconfig.{ConfigFieldMapping, KebabCase}
+    
+    // For all types, use kebab-case
+    implicit def hint[T]: ProductHint[T] = ProductHint[T](
+      fieldMapping = ConfigFieldMapping(KebabCase, KebabCase),
+      allowUnknownKeys = false
+    )
+    
+    ConfigSource.default.at("").load[AppConfig]
   }
 }

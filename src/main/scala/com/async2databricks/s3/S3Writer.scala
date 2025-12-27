@@ -75,8 +75,6 @@ object S3Writer extends LazyLogging {
         Async[F].delay {
           logger.info(s"Writing parquet data to: s3://${config.bucket}/$outputPath")
           
-          val fullPath = s"s3a://${config.bucket}/$outputPath"
-          
           // Configure Hadoop for S3
           val hadoopConf = new org.apache.hadoop.conf.Configuration()
           hadoopConf.set("fs.s3a.access.key", config.accessKey)
@@ -92,7 +90,8 @@ object S3Writer extends LazyLogging {
             Async[F].delay {
               if (records.nonEmpty) {
                 val path = ParquetPath(s"s3a://${config.bucket}/$outputPath")
-                ParquetWriter.writeAndClose(path, records)
+                // Use newer builder API
+                ParquetWriter.of[SampleData].writeAndClose(path, records)
                 logger.info(s"Successfully wrote ${records.size} records to $outputPath")
               } else {
                 logger.warn("No records to write")

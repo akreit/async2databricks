@@ -2,7 +2,6 @@ package com.async2databricks.etl
 
 import cats.effect._
 import cats.implicits._
-import fs2.Stream
 import com.async2databricks.config.AppConfig
 import com.async2databricks.database.{DatabaseConnection, DataRepository}
 import com.async2databricks.s3.S3Writer

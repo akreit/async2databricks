@@ -12,10 +12,12 @@ object Main extends IOApp with LazyLogging {
     
     val program = for {
       // Load configuration
-      config <- IO.fromEither(AppConfig.load())
+      config <- IO.fromEither(AppConfig.load().left.map(failures => 
+        new RuntimeException(s"Configuration error: ${failures.toList.mkString(", ")}")
+      ))
         .handleErrorWith { error =>
           IO.delay(logger.error("Failed to load configuration", error)) *>
-            IO.raiseError(new RuntimeException("Configuration error", error))
+            IO.raiseError(error)
         }
       
       _ <- IO.delay(logger.info("Configuration loaded successfully"))

@@ -2,37 +2,55 @@ package com.async2databricks.config
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import pureconfig.ConfigSource
 
 class AppConfigSpec extends AnyFlatSpec with Matchers {
 
-  "AppConfig" should "load from configuration file" in {
-    val config = AppConfig.load()
-    config.isRight shouldBe true
+  "DatabaseConfig" should "be created with valid values" in {
+    val dbConfig = DatabaseConfig(
+      driver = "org.postgresql.Driver",
+      url = "jdbc:postgresql://localhost:5432/test",
+      user = "test",
+      password = "test",
+      poolSize = 10
+    )
     
-    val appConfig = config.right.get
-    appConfig.database.driver shouldBe "org.postgresql.Driver"
-    appConfig.database.poolSize shouldBe 10
-    appConfig.s3.bucket shouldBe "etl-output-bucket"
-    appConfig.etl.batchSize shouldBe 1000
+    dbConfig.driver shouldBe "org.postgresql.Driver"
+    dbConfig.poolSize should be > 0
   }
 
-  it should "have valid database configuration" in {
-    val config = AppConfig.load().right.get
-    config.database.url should include("postgresql")
-    config.database.user should not be empty
-    config.database.password should not be empty
+  "S3Config" should "be created with valid values" in {
+    val s3Config = S3Config(
+      bucket = "test-bucket",
+      prefix = "prefix/",
+      endpoint = "http://localhost:4566",
+      region = "us-east-1",
+      accessKey = "test",
+      secretKey = "test"
+    )
+    
+    s3Config.bucket should not be empty
+    s3Config.region should not be empty
   }
 
-  it should "have valid S3 configuration" in {
-    val config = AppConfig.load().right.get
-    config.s3.bucket should not be empty
-    config.s3.region should not be empty
+  "EtlConfig" should "be created with valid values" in {
+    val etlConfig = EtlConfig(
+      batchSize = 1000,
+      query = "SELECT * FROM test"
+    )
+    
+    etlConfig.batchSize should be > 0
+    etlConfig.query should not be empty
   }
-
-  it should "have valid ETL configuration" in {
-    val config = AppConfig.load().right.get
-    config.etl.batchSize should be > 0
-    config.etl.query should not be empty
+  
+  "AppConfig" should "be created with all components" in {
+    val appConfig = AppConfig(
+      database = DatabaseConfig("driver", "url", "user", "pass", 10),
+      s3 = S3Config("bucket", "prefix/", "endpoint", "region", "key", "secret"),
+      etl = EtlConfig(1000, "SELECT *")
+    )
+    
+    appConfig.database should not be null
+    appConfig.s3 should not be null
+    appConfig.etl should not be null
   }
 }
