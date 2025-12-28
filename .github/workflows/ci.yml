@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache SBT
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+            ~/.coursier
+          key: sbt-cache-${{ runner.os }}-${{ hashFiles('**/build.sbt') }}
+          restore-keys: |
+            sbt-cache-${{ runner.os }}-
+
+      - name: Run scalafmt check
+        run: sbt scalafmtCheckAll
+
+      - name: Run scalafix check
+        run: sbt "scalafixAll --check"
+
+      - name: Run tests with coverage
+        run: |
+          sbt coverage test coverageReport
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: target/scala-3.7.4/scoverage-report
+
+      - name: Generate coverage badge
+        uses: simonh1000/sbt-scoverage-badge-action@v2
+        with:
+          reportDir: target/scala-3.7.4/scoverage-report
+          output: coverage-badge.svg
+
+      - name: Upload coverage badge
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-badge
+          path: coverage-badge.svg
+
