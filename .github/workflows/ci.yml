@@ -42,3 +42,4 @@ jobs:
           name: coverage-report
           path: target/scala-3.7.4/scoverage-report
 
+
