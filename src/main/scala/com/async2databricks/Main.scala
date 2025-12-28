@@ -6,6 +6,9 @@ import com.async2databricks.etl.EtlPipeline
 import com.async2databricks.utils.CatsLogger
 import com.async2databricks.utils.SafeFileOps.*
 
+/**
+ * main entry point for the application
+ */
 object Main extends IOApp with CatsLogger {
 
   override def run(args: List[String]): IO[ExitCode] = {
