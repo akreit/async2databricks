@@ -1,8 +1,8 @@
 package com.async2databricks.model
 
+import java.time.LocalDateTime
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import java.time.LocalDateTime
 
 class SampleDataSpec extends AnyFlatSpec with Matchers {
 
