@@ -46,15 +46,3 @@ jobs:
           name: coverage-report
           path: target/scala-3.7.4/scoverage-report
 
-      - name: Generate coverage badge
-        uses: simonh1000/sbt-scoverage-badge-action@v2
-        with:
-          reportDir: target/scala-3.7.4/scoverage-report
-          output: coverage-badge.svg
-
-      - name: Upload coverage badge
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-badge
-          path: coverage-badge.svg
-
