@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: sbtscala/scala-sbt:eclipse-temurin-alpine-25.0.1_8_1.11.7_3.7.4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache SBT
+        uses: actions/cache@v4
+        with:
+          path: |
+            /root/.ivy2/cache
+            /root/.sbt
+            /root/.coursier
+          key: sbt-cache-${{ runner.os }}-${{ hashFiles('**/build.sbt') }}
+          restore-keys: |
+            sbt-cache-${{ runner.os }}-
+
+      - name: Run scalafmt check
+        run: sbt scalafmtCheckAll
+
+      - name: Run scalafix check
+        run: sbt "scalafixAll --check"
+
+      - name: Run tests with coverage
+        run: |
+          sbt coverage test coverageReport
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: target/scala-3.7.4/scoverage-report
+
+
