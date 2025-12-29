@@ -18,7 +18,10 @@ object DataRepository extends LazyLogging {
 
   def apply[F[_]: Async](xa: Transactor[F]): DataRepository[F] =
     new DataRepository[F] {
-      override def streamData(query: String, batchSize: Int): Stream[F, SampleData] = {
+      override def streamData(
+          query: String,
+          batchSize: Int
+      ): Stream[F, SampleData] = {
         logger.info(s"Starting to stream data with query: $query")
 
         Fragment
