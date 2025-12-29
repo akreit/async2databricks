@@ -44,21 +44,16 @@ object S3Writer extends CatsLogger {
           .region(Region.of(config.region))
 
         // Use custom endpoint for LocalStack
-        val client =
-          if (
-            config.endpoint.nonEmpty && config.endpoint != "https://s3.amazonaws.com"
-          ) {
-            builder.endpointOverride(URI.create(config.endpoint)).build()
-          } else {
-            builder.build()
-          }
-
-        // Log effectfully
-        log.info(
-          s"S3 client created for endpoint: ${config.endpoint}"
-        ) // Only for side-effect, not recommended in prod
-        client
-      }
+        if (
+          config.endpoint.nonEmpty && config.endpoint != "https://s3.amazonaws.com"
+        ) {
+          builder.endpointOverride(URI.create(config.endpoint)).build()
+        } else {
+          builder.build()
+        }
+      }.flatTap(client =>
+        log.info(s"S3 client created for endpoint: ${config.endpoint}")
+      )
     }(client => Async[F].delay(client.close()))
   }
 
@@ -69,23 +64,29 @@ object S3Writer extends CatsLogger {
       bucketName: String
   ): F[Unit] = {
     val log = logger[F]
-    Async[F].delay {
-      try {
-        s3Client.headBucket(
-          HeadBucketRequest.builder().bucket(bucketName).build()
-        )
-        log.info(
-          s"Bucket $bucketName already exists"
-        ) // Only for side-effect, not recommended in prod
-      } catch {
-        case _: NoSuchBucketException =>
-          log.info(s"Creating bucket $bucketName")
-          s3Client.createBucket(
-            CreateBucketRequest.builder().bucket(bucketName).build()
+    Async[F]
+      .delay {
+        try {
+          s3Client.headBucket(
+            HeadBucketRequest.builder().bucket(bucketName).build()
           )
-          log.info(s"Bucket $bucketName created successfully")
+          Some(())
+        } catch {
+          case _: NoSuchBucketException => None
+        }
       }
-    }
+      .flatMap {
+        case Some(_) =>
+          log.info(s"Bucket $bucketName already exists")
+        case None =>
+          log.info(s"Creating bucket $bucketName") *>
+            Async[F].delay(
+              s3Client.createBucket(
+                CreateBucketRequest.builder().bucket(bucketName).build()
+              )
+            ) *>
+            log.info(s"Bucket $bucketName created successfully")
+      }
   }
 
   def apply[F[_]: Async](config: S3Config): Resource[F, S3Writer[F]] = {
