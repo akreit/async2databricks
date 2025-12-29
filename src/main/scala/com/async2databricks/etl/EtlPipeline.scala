@@ -43,7 +43,7 @@ class EtlPipeline[F[_]: Async](config: AppConfig) extends CatsLogger {
           } yield ()
         }
         .handleErrorWith { error =>
-          logger[F].error(s"ETL Pipeline failed due to: $error") *>
+          logger[F].error(error)("ETL Pipeline failed during ETL run") *>
             Async[F].raiseError(error)
         }
     }
