@@ -4,9 +4,9 @@ import cats.effect.*
 import cats.implicits.*
 import com.async2databricks.config.S3Config
 import com.async2databricks.model.SampleData
+import com.async2databricks.utils.CatsLogger
 import com.github.mjakubowski84.parquet4s.ParquetWriter
 import com.github.mjakubowski84.parquet4s.Path as ParquetPath
-import com.typesafe.scalalogging.LazyLogging
 import fs2.Stream
 import java.net.URI
 import java.time.LocalDateTime
@@ -26,13 +26,14 @@ trait S3Writer[F[_]] {
   def writeParquet(data: Stream[F, SampleData], outputPath: String): F[Unit]
 }
 
-object S3Writer extends LazyLogging {
+object S3Writer extends CatsLogger {
 
   /** Creates an S3 client configured for LocalStack or AWS
     */
-  def createS3Client(config: S3Config): Resource[IO, S3Client] = {
+  def createS3Client[F[_]: Async](config: S3Config): Resource[F, S3Client] = {
+    val log = logger[F]
     Resource.make {
-      IO.delay {
+      Async[F].delay {
         val credentialsProvider = StaticCredentialsProvider.create(
           AwsBasicCredentials.create(config.accessKey, config.secretKey)
         )
@@ -47,88 +48,97 @@ object S3Writer extends LazyLogging {
           if (
             config.endpoint.nonEmpty && config.endpoint != "https://s3.amazonaws.com"
           ) {
-            builder
-              .endpointOverride(URI.create(config.endpoint))
-              .build()
+            builder.endpointOverride(URI.create(config.endpoint)).build()
           } else {
             builder.build()
           }
 
-        logger.info(s"S3 client created for endpoint: ${config.endpoint}")
+        // Log effectfully
+        log.info(
+          s"S3 client created for endpoint: ${config.endpoint}"
+        ) // Only for side-effect, not recommended in prod
         client
       }
-    }(client => IO.delay(client.close()))
+    }(client => Async[F].delay(client.close()))
   }
 
   /** Ensures the S3 bucket exists, creates it if not
     */
-  def ensureBucket(s3Client: S3Client, bucketName: String): IO[Unit] = {
-    IO.delay {
+  def ensureBucket[F[_]: Async](
+      s3Client: S3Client,
+      bucketName: String
+  ): F[Unit] = {
+    val log = logger[F]
+    Async[F].delay {
       try {
         s3Client.headBucket(
           HeadBucketRequest.builder().bucket(bucketName).build()
         )
-        logger.info(s"Bucket $bucketName already exists")
+        log.info(
+          s"Bucket $bucketName already exists"
+        ) // Only for side-effect, not recommended in prod
       } catch {
         case _: NoSuchBucketException =>
-          logger.info(s"Creating bucket $bucketName")
+          log.info(s"Creating bucket $bucketName")
           s3Client.createBucket(
             CreateBucketRequest.builder().bucket(bucketName).build()
           )
-          logger.info(s"Bucket $bucketName created successfully")
+          log.info(s"Bucket $bucketName created successfully")
       }
     }
   }
 
   def apply[F[_]: Async](config: S3Config): Resource[F, S3Writer[F]] = {
-    Resource.eval(Async[F].delay(new S3Writer[F] {
-      override def writeParquet(
-          data: Stream[F, SampleData],
-          outputPath: String
-      ): F[Unit] = {
-        // Configure Hadoop for S3 access
-        val hadoopConf = new org.apache.hadoop.conf.Configuration()
-        hadoopConf.set("fs.s3a.access.key", config.accessKey)
-        hadoopConf.set("fs.s3a.secret.key", config.secretKey)
-        hadoopConf.set("fs.s3a.endpoint", config.endpoint)
-        hadoopConf.set("fs.s3a.path.style.access", "true")
-        hadoopConf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-        hadoopConf.set(
-          "fs.s3a.connection.ssl.enabled",
-          "false"
-        ) // For LocalStack
-
-        Async[F]
-          .delay {
-            logger.info(
+    val log = logger[F]
+    Resource.eval(
+      new S3Writer[F] {
+        override def writeParquet(
+            data: Stream[F, SampleData],
+            outputPath: String
+        ): F[Unit] = {
+          // Configure Hadoop for S3 access
+          val hadoopConf = new org.apache.hadoop.conf.Configuration()
+          hadoopConf.set("fs.s3a.access.key", config.accessKey)
+          hadoopConf.set("fs.s3a.secret.key", config.secretKey)
+          hadoopConf.set("fs.s3a.endpoint", config.endpoint)
+          hadoopConf.set("fs.s3a.path.style.access", "true")
+          hadoopConf.set(
+            "fs.s3a.impl",
+            "org.apache.hadoop.fs.s3a.S3AFileSystem"
+          )
+          hadoopConf.set(
+            "fs.s3a.connection.ssl.enabled",
+            "false"
+          ) // For LocalStack
+          for {
+            _ <- log.info(
               s"Writing parquet data to: s3://${config.bucket}/$outputPath"
             )
-            logger.debug(
+            _ <- log.debug(
               s"Hadoop configuration set for S3: endpoint=${config.endpoint}"
             )
-          }
-          .flatMap { _ =>
-            // Convert stream to list and write
-            data.compile.toList.flatMap { records =>
-              Async[F].delay {
-                if (records.nonEmpty) {
-                  val path = ParquetPath(s"s3a://${config.bucket}/$outputPath")
-                  // Use builder API with Hadoop configuration
-                  ParquetWriter
-                    .of[SampleData]
-                    .options(ParquetWriter.Options(hadoopConf = hadoopConf))
-                    .writeAndClose(path, records)
-                  logger.info(
+            records <- data.compile.toList
+            _ <-
+              if (records.nonEmpty) {
+                val path = ParquetPath(s"s3a://${config.bucket}/$outputPath")
+                for {
+                  _ <- Async[F].blocking {
+                    ParquetWriter
+                      .of[SampleData]
+                      .options(ParquetWriter.Options(hadoopConf = hadoopConf))
+                      .writeAndClose(path, records)
+                  }
+                  _ <- log.info(
                     s"Successfully wrote ${records.size} records to $outputPath"
                   )
-                } else {
-                  logger.warn("No records to write")
-                }
+                } yield ()
+              } else {
+                log.warn("No records to write")
               }
-            }
-          }
-      }
-    }))
+          } yield ()
+        }
+      }.pure[F]
+    )
   }
 
   /** Generate a timestamped output path

@@ -11,15 +11,16 @@ import com.async2databricks.utils.SafeFileOps.*
 object Main extends IOApp with CatsLogger {
 
   override def run(args: List[String]): IO[ExitCode] = {
-    logger.info("Application starting...")
+    val ioLogger = logger[IO]
+    ioLogger.info("Application starting...")
 
     val program = for {
       // Load configuration
       config <- loadConfig[AppConfig]("application.conf")
 
-      _ <- logger.info("Configuration loaded successfully")
-      _ <- logger.info(s"Database: ${config.database.url}")
-      _ <- logger.info(s"S3 Bucket: ${config.s3.bucket}")
+      _ <- ioLogger.info("Configuration loaded successfully")
+      _ <- ioLogger.info(s"Database: ${config.database.url}")
+      _ <- ioLogger.info(s"S3 Bucket: ${config.s3.bucket}")
 
       // Run ETL pipeline
       pipeline = EtlPipeline[IO](config)
@@ -29,7 +30,7 @@ object Main extends IOApp with CatsLogger {
 
     program
       .handleErrorWith { error =>
-        logger
+        ioLogger
           .error(s"Application failed with error: ${error.getMessage}")
           .as(ExitCode.Error)
       }
