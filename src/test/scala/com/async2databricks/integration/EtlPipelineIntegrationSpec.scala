@@ -22,7 +22,7 @@ class EtlPipelineIntegrationSpec
 
   "EtlPipeline" should "successfully extract data from PostgreSQL and load to S3" in {
     withContainers { postgres =>
-      val testIO = for {
+      (for {
         // Set up test database with sample data
         _ <- setupTestData(postgres)
 
@@ -30,7 +30,7 @@ class EtlPipelineIntegrationSpec
         config = createTestConfig(postgres)
 
         // Create resources
-        result <- DatabaseConnection
+        _ <- DatabaseConnection
           .createTransactor[IO](config.database)
           .use { xa =>
             // Verify data exists in database
@@ -56,23 +56,21 @@ class EtlPipelineIntegrationSpec
                 data.head shouldBe a[SampleData]
                 data.head.name shouldBe "Product A"
               }
-            } yield ()
+            } yield succeed
           }
-      } yield result
-
-      testIO.unsafeToFuture().map(_ => succeed)
+      } yield succeed).unsafeToFuture()
     }
   }
 
   it should "handle empty result sets gracefully" in {
     withContainers { postgres =>
-      val testIO = for {
+      (for {
         // Set up test database with empty table
         _ <- setupEmptyTable(postgres)
 
         config = createTestConfig(postgres)
 
-        result <- DatabaseConnection
+        _ <- DatabaseConnection
           .createTransactor[IO](config.database)
           .use { xa =>
             val repo = DataRepository[IO](xa)
@@ -82,23 +80,21 @@ class EtlPipelineIntegrationSpec
                 .compile
                 .toList
               _ <- IO(data shouldBe empty)
-            } yield ()
+            } yield succeed
           }
-      } yield result
-
-      testIO.unsafeToFuture().map(_ => succeed)
+      } yield succeed).unsafeToFuture()
     }
   }
 
   it should "stream data in batches correctly" in {
     withContainers { postgres =>
-      val testIO = for {
+      (for {
         _ <- setupTestData(postgres)
         config = createTestConfig(postgres).copy(
           etl = EtlConfig(batchSize = 3, query = "SELECT * FROM sample_data")
         )
 
-        result <- DatabaseConnection
+        _ <- DatabaseConnection
           .createTransactor[IO](config.database)
           .use { xa =>
             val repo = DataRepository[IO](xa)
@@ -112,15 +108,13 @@ class EtlPipelineIntegrationSpec
                 .toList
               
               _ <- IO {
-                // Should have 4 batches: 3+3+3+1 = 10 records
-                batchSizes.size should be >= 1
+                // With 10 records and batch size 3, we should have multiple batches
+                batchSizes should not be empty
                 batchSizes.sum shouldBe 10
               }
-            } yield ()
+            } yield succeed
           }
-      } yield result
-
-      testIO.unsafeToFuture().map(_ => succeed)
+      } yield succeed).unsafeToFuture()
     }
   }
 
