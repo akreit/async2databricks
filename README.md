@@ -327,7 +327,10 @@ Update the data model in `src/main/scala/com/async2databricks/model/SampleData.s
     │       ├── model/             # Domain models
     │       └── s3/                # S3/Parquet writer
     └── test/
-        └── scala/com/async2databricks/  # Unit tests
+        └── scala/com/async2databricks/
+            ├── config/            # Configuration tests
+            ├── model/             # Model tests
+            └── integration/       # Integration tests with testcontainers
 ```
 
 ## Development
@@ -346,11 +349,22 @@ sbt update
 sbt scalafmt
 ```
 
-### Running Specific Tests
+### Running Tests
+
+Run all tests (unit and integration):
+
+```bash
+sbt test
+```
+
+Run specific test suites:
 
 ```bash
 sbt "testOnly com.async2databricks.config.AppConfigSpec"
+sbt "testOnly com.async2databricks.integration.EtlPipelineIntegrationSpec"
 ```
+
+**Note:** Integration tests use testcontainers-scala and require Docker to be running.
 
 ## Troubleshooting
 

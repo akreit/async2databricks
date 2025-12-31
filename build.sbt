@@ -56,8 +56,13 @@ libraryDependencies ++= Seq(
 
   // Testing
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
-  "org.scalatestplus" %% "scalacheck-1-17" % "3.2.18.0" % Test
+  "org.scalatestplus" %% "scalacheck-1-17" % "3.2.18.0" % Test,
+  "org.typelevel" %% "cats-effect-testing-scalatest" % "1.7.0" % Test,
   // Doobie-scalatest is not available for Scala 3 as of 0.13.4
+  
+  // Testcontainers for integration tests
+  "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.44.1" % Test,
+  "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.44.1" % Test
 )
 
 // Assembly settings for building a fat JAR

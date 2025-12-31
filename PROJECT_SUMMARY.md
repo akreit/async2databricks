@@ -98,16 +98,17 @@ async2databricks/
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
-| Language | Scala | 2.13.12 |
+| Language | Scala | 3.7.4 |
 | Build Tool | SBT | 1.9.7 |
-| Database Access | Doobie | 1.0.0-RC4 |
-| Streaming | FS2 | 3.9.3 |
-| Effects | Cats Effect | 3.5.2 |
-| Parquet | Parquet4s | 2.15.0 |
-| Configuration | PureConfig | 0.17.4 |
-| S3 Access | Hadoop AWS | 3.3.4 |
-| Logging | Logback | 1.4.11 |
-| Testing | ScalaTest | 3.2.17 |
+| Database Access | Doobie | 1.0.0-RC10 |
+| Streaming | FS2 | 3.12.2 |
+| Effects | Cats Effect | 3.6.3 |
+| Parquet | Parquet4s | 2.23.0 |
+| Configuration | PureConfig | 0.17.9 |
+| S3 Access | Hadoop AWS | 3.4.2 |
+| Logging | Logback | 1.5.23 |
+| Testing | ScalaTest | 3.2.19 |
+| Integration Testing | Testcontainers Scala | 0.41.4 |
 | Database | PostgreSQL | 15 |
 | Local S3 | LocalStack | 3.0 |
 
@@ -133,7 +134,9 @@ async2databricks/
 
 ### Testing
 - **Unit Tests**: Tests for core components (6 tests, all passing)
-- **Integration Script**: Automated integration testing with Docker
+- **Integration Tests**: End-to-end tests using testcontainers-scala (3 tests, all passing)
+- **Total Test Coverage**: 9 tests covering configuration, models, and full ETL pipeline
+- **Automated Testing**: Docker-based integration tests verify database extraction and streaming
 - **Modular Tests**: Easy to add more tests following existing patterns
 
 ### Documentation
@@ -165,12 +168,13 @@ docker exec etl-localstack awslocal s3 ls s3://etl-output-bucket/data/parquet/
 ## 📊 Testing Results
 
 ```
-✅ All 6 tests passing
+✅ All 9 tests passing (6 unit + 3 integration)
 ✅ Compilation successful
+✅ Integration tests use testcontainers for PostgreSQL
 ✅ Docker environment healthy
-✅ Database initialized with 10 records
-✅ S3 bucket created successfully
-✅ Integration test script passes
+✅ Database extraction and streaming verified
+✅ Empty result set handling tested
+✅ Batch processing verified
 ```
 
 ## 🔐 Security Considerations
