@@ -40,6 +40,7 @@ class EtlPipeline[F[_]: Async](config: AppConfig) extends CatsLogger {
             )
             // Write to S3
             _ <- s3Writer.writeParquet(dataStream, outputPath)
+            _ <- logger[F].info("ETL Pipeline completed successfully")
           } yield ()
         }
         .handleErrorWith { error =>
