@@ -3,7 +3,8 @@ package com.async2databricks.integration
 import cats.effect.*
 import cats.effect.testing.scalatest.AsyncIOSpec
 import com.async2databricks.config.*
-import com.async2databricks.database.{DataRepository, DatabaseConnection}
+import com.async2databricks.database.DataRepository
+import com.async2databricks.database.DatabaseConnection
 import com.async2databricks.model.SampleData
 import com.dimafeng.testcontainers.PostgreSQLContainer
 import com.dimafeng.testcontainers.scalatest.TestContainerForAll
@@ -106,7 +107,7 @@ class EtlPipelineIntegrationSpec
                 .map(_.size)
                 .compile
                 .toList
-              
+
               _ <- IO {
                 // With 10 records and batch size 3, we should have multiple batches
                 batchSizes should not be empty
@@ -127,10 +128,10 @@ class EtlPipelineIntegrationSpec
       )
       try {
         val stmt = conn.createStatement()
-        
+
         // Drop table if exists and create fresh
         stmt.execute("DROP TABLE IF EXISTS sample_data")
-        
+
         // Create table
         stmt.execute("""
           CREATE TABLE sample_data (
